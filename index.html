@@ -11,6 +11,34 @@
   <script crossorigin="" src="assets/index-Djp0u-vO.js" type="module">
   </script>
   <link crossorigin="" href="assets/index-BdR528PN.css" rel="stylesheet">
+  <style>
+    #sheets-widget {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 380px;
+      background: rgba(10, 10, 10, 0.95);
+      border: 1px solid #333;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 15px 40px rgba(0,0,0,0.6);
+      z-index: 9999;
+      display: none;
+      color: white;
+      max-height: 80vh;
+      overflow-y: auto;
+      font-family: Arial, sans-serif;
+    }
+    #sync-status {
+      text-align: center;
+      font-weight: bold;
+      font-size: 14px;
+      margin-bottom: 15px;
+    }
+    .status-loading { color: #fbbc04; }
+    .status-success { color: #34a853; }
+    .status-error { color: #ea4335; }
+  </style>
   <script type="module">
    if (window.self === window.top) {
   let lastPath = "";
@@ -20,6 +48,17 @@
   }
   function trackPageView() {
     const path = window.location.pathname;
+
+    // Toggle sheets widget visibility on /Vault
+    const widget = document.getElementById('sheets-widget');
+    if (widget) {
+      if (path.toLowerCase().startsWith('/vault')) {
+        widget.style.display = 'block';
+      } else {
+        widget.style.display = 'none';
+      }
+    }
+
     if (path === lastPath) return;
     lastPath = path;
     const pageName = getPageNameFromPath(path) || "home";
@@ -69,6 +108,10 @@
   </script>
  </head>
  <body>
+  <div id="sheets-widget">
+    <div id="sync-status"></div>
+    <div id="data-container"></div>
+  </div>
   <div id="root">
    <div data-seo-source="builder" id="seo-snapshot" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;">
     <h1>
@@ -121,7 +164,8 @@
       </li>
      </ul>
     </section>
+    </div>
    </div>
-  </div>
- </body>
-</html>
+  </body>
+  <script src="assets/sheets-integration.js"></script>
+ </html>
