@@ -2,6 +2,8 @@ const express = require('express');
 const { google } = require('googleapis');
 const cors = require('cors');
 const path = require('path');
+const multer = require('multer');
+const { Readable } = require('stream');
 require('dotenv').config();
 
 const app = express();
@@ -19,14 +21,21 @@ const oauth2Client = new google.auth.OAuth2(
 // Store tokens in memory (use database in production)
 let tokens = {};
 
-// Sheets API
+// APIs
 const sheets = google.sheets({ version: 'v4', auth: oauth2Client });
+const drive = google.drive({ version: 'v3', auth: oauth2Client });
+
+// Multer config for file uploads (in-memory)
+const upload = multer({ storage: multer.memoryStorage() });
 
 // Route to get Google login URL
 app.get('/api/auth/url', (req, res) => {
   const authUrl = oauth2Client.generateAuthUrl({
     access_type: 'offline',
-    scope: ['https://www.googleapis.com/auth/spreadsheets'],
+    scope: [
+      'https://www.googleapis.com/auth/spreadsheets',
+      'https://www.googleapis.com/auth/drive'
+    ],
   });
   res.json({ authUrl });
 });
@@ -128,6 +137,45 @@ app.put('/api/data/:rowIndex', async (req, res) => {
 // Check auth status
 app.get('/api/auth/status', (req, res) => {
   res.json({ authenticated: !!tokens.access_token });
+});
+
+// Upload file to Google Drive
+app.post('/api/upload', upload.single('file'), async (req, res) => {
+  try {
+    if (!tokens.access_token) {
+      return res.status(401).json({ error: 'Not authenticated. Please login first.' });
+    }
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded.' });
+    }
+
+    oauth2Client.setCredentials(tokens);
+
+    const fileMetadata = {
+      name: req.file.originalname,
+      parents: [process.env.GOOGLE_DRIVE_FOLDER_ID]
+    };
+
+    const media = {
+      mimeType: req.file.mimetype,
+      body: Readable.from(req.file.buffer)
+    };
+
+    const driveResponse = await drive.files.create({
+      resource: fileMetadata,
+      media: media,
+      fields: 'id, webViewLink'
+    });
+
+    res.json({ 
+      success: true, 
+      fileId: driveResponse.data.id,
+      url: driveResponse.data.webViewLink 
+    });
+  } catch (error) {
+    console.error('Error uploading to Drive:', error);
+    res.status(500).json({ error: 'Failed to upload file: ' + error.message });
+  }
 });
 
 // Serve index.html
