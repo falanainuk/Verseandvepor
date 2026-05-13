@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+ <head>
+  <meta charset="utf-8"/>
+  <link href="logo.png" rel="icon" type="image/svg+xml">
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <link href="manifest.json" rel="manifest">
+  <title>
+   Verse &amp; Vapor
+  </title>
+  <script crossorigin="" src="assets/index-Djp0u-vO.js" type="module">
+  </script>
+  <link crossorigin="" href="assets/index-BdR528PN.css" rel="stylesheet">
+  <script src="assets/sheets-integration.js"></script>
+  <script type="module">
+   if (window.self === window.top) {
+  let lastPath = "";
+  function getPageNameFromPath(path) {
+    const segments = path.split("/").filter(Boolean);
+    return segments[0] || null;
+  }
+  function trackPageView() {
+    const path = window.location.pathname;
+    if (path === lastPath) return;
+    lastPath = path;
+    const pageName = getPageNameFromPath(path) || "home";
+    const appId = "69ff95ff37a9d3db909761e3";
+    if (!appId) return;
+    fetch(`/app-logs/${appId}/log-user-in-app/${pageName}`, {
+      method: "POST",
+    }).catch(() => {});
+  }
+  const originalPushState = history.pushState.bind(history);
+  history.pushState = function (...args) {
+    originalPushState(...args);
+    trackPageView();
+  };
+  const originalReplaceState = history.replaceState.bind(history);
+  history.replaceState = function (...args) {
+    originalReplaceState(...args);
+    trackPageView();
+  };
+  window.addEventListener("popstate", trackPageView);
+  trackPageView();
+}
+  </script>
+  <meta content="An ethereal digital sanctuary for luxury perfumery, blending cinematic videography and fluid motion to redefine olfactory commerce." name="description"/>
+  <meta content="Verse &amp; Vapor" property="og:title"/>
+  <meta content="An ethereal digital sanctuary for luxury perfumery, blending cinematic videography and fluid motion to redefine olfactory commerce." property="og:description"/>
+  <meta content="logo.png" property="og:image">
+  <meta content="https://scent-vapor-vibe.base44.app" property="og:url"/>
+  <meta content="website" property="og:type"/>
+  <meta content="Verse &amp; Vapor" property="og:site_name"/>
+  <meta content="Verse &amp; Vapor" name="twitter:title"/>
+  <meta content="An ethereal digital sanctuary for luxury perfumery, blending cinematic videography and fluid motion to redefine olfactory commerce." name="twitter:description"/>
+  <meta content="https://media.base44.com/images/public/69ff95ff37a9d3db909761e3/03951d7c1_logo.png/v1/fill/w_1200,h_630/03951d7c1_logo.png" name="twitter:image"/>
+  <meta content="summary_large_image" name="twitter:card"/>
+  <meta content="https://scent-vapor-vibe.base44.app" name="twitter:url"/>
+  <meta content="yes" name="mobile-web-app-capable"/>
+  <meta content="black" name="apple-mobile-web-app-status-bar-style"/>
+  <meta content="Verse &amp; Vapor" name="apple-mobile-web-app-title"/>
+  <link href="https://scent-vapor-vibe.base44.app" rel="canonical"/>
+  <script data-seo-source="builder" type="application/ld+json">
+   {"name": "Verse & Vapor", "@context": "https://schema.org", "@type": "WebSite", "url": "https://scent-vapor-vibe.base44.app"}
+  </script>
+  <script data-seo-source="builder" type="application/ld+json">
+   {"name": "Verse & Vapor", "logo": "https://media.base44.com/images/public/69ff95ff37a9d3db909761e3/03951d7c1_logo.png", "@context": "https://schema.org", "@type": "Organization", "url": "https://scent-vapor-vibe.base44.app"}
+  </script>
+  <script async="true" data-app-id="69ff95ff37a9d3db909761e3" data-platform-url="https://app.base44.com" src="/static/js/badge.js">
+  </script>
+ </head>
+ <body>
+  <div id="data-container" style="margin: 20px; padding: 20px; border: 1px solid #ddd; border-radius: 4px;"></div>
+  <div id="root">
+   <div data-seo-source="builder" id="seo-snapshot" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;">
+    <h1>
+     Verse &amp; Vapor
+    </h1>
+    <p>
+     An ethereal digital sanctuary for luxury perfumery, blending cinematic videography and fluid motion to redefine olfactory commerce.
+    </p>
+    <nav aria-label="Pages">
+     <h2>
+      Pages
+     </h2>
+     <ul>
+      <li>
+       <a href="/OrderHistory">
+        OrderHistory
+       </a>
+      </li>
+      <li>
+       <a href="/ProductDetail">
+        ProductDetail
+       </a>
+      </li>
+      <li>
+       <a href="/Vault">
+        Vault
+       </a>
+      </li>
+     </ul>
+    </nav>
+    <section aria-label="Data">
+     <h2>
+      Data types
+     </h2>
+     <ul>
+      <li>
+       Product
+      </li>
+      <li>
+       SiteSettings
+      </li>
+      <li>
+       WaitlistEntry
+      </li>
+      <li>
+       Order
+      </li>
+      <li>
+       PaymentMethod
+      </li>
+     </ul>
+    </section>
+   </div>
+  </div>
+ </body>
+</html>
