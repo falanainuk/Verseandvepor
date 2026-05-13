@@ -48,12 +48,22 @@
       font-size: 14px;
       text-align: center;
     }
+    #sync-status {
+      text-align: center;
+      margin-top: 15px;
+      font-weight: bold;
+      font-size: 14px;
+    }
+    .status-loading { color: #fbbc04; }
+    .status-success { color: #34a853; }
+    .status-error { color: #ea4335; }
   </style>
 </head>
 <body>
   <div class="admin-panel">
     <h1>Verse & Vapor Admin</h1>
     <p style="text-align:center; color:#ccc;">This page is for admin Google Sheet access only.</p>
+    <div id="sync-status"></div>
     <div id="data-container"></div>
     <p class="note">Use this page to sign in as the admin and manage your Google Sheet data. The public homepage will not show this panel.</p>
   </div>
