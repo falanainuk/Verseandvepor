@@ -49,13 +49,16 @@ app.get('/api/data', async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('products')
-      .select('*')
-      .order('id', { ascending: true });
+      .select('*');
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase error:', error);
+      // If table doesn't exist, return empty data instead of 500
+      if (error.code === '42P01') return res.json({ headers: [], data: [] });
+      throw error;
+    }
 
-    // Map headers based on first object keys or hardcoded
-    const headers = data.length > 0 ? Object.keys(data[0]) : ['id', 'name', 'price', 'description', 'image_url', 'category', 'stock'];
+    const headers = data.length > 0 ? Object.keys(data[0]) : ['ID', 'NAME', 'Price', 'Description', 'ImageURL', 'Category', 'InStock', 'VOLUME', 'ORIGIN', 'INGREDIENTS'];
     res.json({ headers, data });
   } catch (error) {
     console.error('Error reading Supabase:', error);
@@ -91,7 +94,7 @@ app.put('/api/data/:id', async (req, res) => {
     const { data, error } = await supabase
       .from('products')
       .update(rowData)
-      .eq('id', id)
+      .eq('ID', id)
       .select();
 
     if (error) throw error;
