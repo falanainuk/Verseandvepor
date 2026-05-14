@@ -1,5 +1,5 @@
-// Google Sheets Integration Client
-class GoogleSheetsClient {
+// Supabase Integration Client (Replacing Google Sheets)
+class SupabaseClient {
   constructor() {
     this.authenticated = false;
     this.data = [];
@@ -31,19 +31,32 @@ class GoogleSheetsClient {
   }
 
   async login() {
+    const password = prompt('Enter Admin Password:');
+    if (!password) return;
+
     try {
-      const response = await fetch('/api/auth/url');
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password }),
+      });
+      
       const data = await response.json();
-      window.location.href = data.authUrl;
+      if (data.success) {
+        this.authenticated = true;
+        await this.loadData();
+      } else {
+        alert('Invalid password');
+      }
     } catch (error) {
-      console.error('Error getting auth URL:', error);
-      alert('Failed to initiate login: ' + error.message);
+      console.error('Error logging in:', error);
+      alert('Login failed');
     }
   }
 
   async loadData() {
     try {
-      this.updateStatus('Syncing with Google Sheets...', 'loading');
+      this.updateStatus('Syncing with Supabase...', 'loading');
       const response = await fetch('/api/data');
       if (!response.ok) {
         if (response.status === 401) {
@@ -61,49 +74,7 @@ class GoogleSheetsClient {
     } catch (error) {
       this.updateStatus('Error syncing data.', 'error');
       console.error('Error loading data:', error);
-      alert('Failed to load data: ' + error.message);
-    }
-  }
-
-  async addRow(rowData) {
-    try {
-      this.updateStatus('Saving new row...', 'loading');
-      const response = await fetch('/api/data', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ headers: this.headers, newRow: rowData }),
-      });
-      const data = await response.json();
-      if (data.success) {
-        await this.loadData();
-        return true;
-      }
-      throw new Error(data.error || 'Failed to add row');
-    } catch (error) {
-      this.updateStatus('Error saving row.', 'error');
-      console.error('Error adding row:', error);
-      alert('Failed to add row: ' + error.message);
-    }
-  }
-
-  async updateRow(rowIndex, rowData) {
-    try {
-      this.updateStatus('Updating row...', 'loading');
-      const response = await fetch(`/api/data/${rowIndex}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rowData }),
-      });
-      const data = await response.json();
-      if (data.success) {
-        await this.loadData();
-        return true;
-      }
-      throw new Error(data.error || 'Failed to update row');
-    } catch (error) {
-      this.updateStatus('Error updating row.', 'error');
-      console.error('Error updating row:', error);
-      alert('Failed to update row: ' + error.message);
+      // Don't alert here to avoid spamming on page load
     }
   }
 
@@ -112,14 +83,13 @@ class GoogleSheetsClient {
     if (!container) return;
 
     if (!this.authenticated) {
-      this.updateStatus('', ''); // Clear status
+      this.updateStatus('', '');
       container.innerHTML = `
-        <div style="text-align: center; padding: 40px; background: #222; border-radius: 12px; margin-top: 20px;">
-          <h2 style="margin-top:0;">Database Access</h2>
-          <p style="color: #bbb; margin-bottom: 24px;">Please sign in to view and edit your Verse & Vapor data.</p>
-          <button onclick="sheetsClient.login()" style="display: inline-flex; align-items: center; padding: 12px 24px; font-size: 16px; font-weight: bold; cursor: pointer; background-color: #fff; color: #444; border: none; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); transition: transform 0.2s;">
-            <svg width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" style="margin-right: 12px;"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.9c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.13-10.36 7.13-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
-            Sign in with Google Auth
+        <div style="text-align: center; padding: 40px; background: #111; border: 1px solid #333; border-radius: 12px; margin-top: 20px;">
+          <h2 style="margin-top:0; color: #fff;">Vault Access</h2>
+          <p style="color: #888; margin-bottom: 24px;">Please enter the admin password to manage Verse & Vapor data.</p>
+          <button onclick="sheetsClient.login()" style="padding: 12px 30px; font-size: 16px; font-weight: bold; cursor: pointer; background: #fff; color: #000; border: none; border-radius: 8px; transition: all 0.2s;">
+            Login to Vault
           </button>
         </div>
       `;
@@ -128,35 +98,44 @@ class GoogleSheetsClient {
 
     if (this.data.length === 0) {
       container.innerHTML = `
-        <div style="text-align: center; padding: 40px;">
-          <p>No data found in sheet</p>
+        <div style="text-align: center; padding: 40px; border: 1px dashed #333; border-radius: 12px; margin-top: 20px;">
+          <p style="color: #666;">No data found in Supabase. Check if the "products" table is created.</p>
         </div>
       `;
       return;
     }
 
     const table = document.createElement('table');
-    table.style.cssText = 'width: 100%; border-collapse: collapse; margin-top: 20px;';
+    table.style.cssText = 'width: 100%; border-collapse: collapse; margin-top: 20px; color: #eee;';
 
-    // Header row
     const headerRow = document.createElement('tr');
-    headerRow.style.cssText = 'background-color: #f0f0f0;';
+    headerRow.style.cssText = 'background-color: #222;';
     this.headers.forEach(header => {
       const th = document.createElement('th');
-      th.style.cssText = 'border: 1px solid #ddd; padding: 12px; text-align: left;';
+      th.style.cssText = 'border: 1px solid #333; padding: 12px; text-align: left; font-size: 13px; text-transform: uppercase; letter-spacing: 1px;';
       th.textContent = header;
       headerRow.appendChild(th);
     });
     table.appendChild(headerRow);
 
-    // Data rows
-    this.data.forEach((row, index) => {
+    this.data.forEach((row) => {
       const tr = document.createElement('tr');
-      tr.style.cssText = 'border: 1px solid #ddd;';
+      tr.style.cssText = 'border: 1px solid #333; transition: background 0.2s;';
+      tr.onmouseover = () => tr.style.backgroundColor = '#1a1a1a';
+      tr.onmouseout = () => tr.style.backgroundColor = 'transparent';
+      
       this.headers.forEach(header => {
         const td = document.createElement('td');
-        td.style.cssText = 'border: 1px solid #ddd; padding: 12px;';
-        td.textContent = row[header] || '';
+        td.style.cssText = 'border: 1px solid #333; padding: 12px; font-size: 14px;';
+        
+        // Truncate long values like image URLs
+        const val = row[header] || '';
+        if (typeof val === 'string' && val.startsWith('http') && val.length > 30) {
+          td.innerHTML = `<a href="${val}" target="_blank" style="color: #55acee; text-decoration: none;">View Link</a>`;
+        } else {
+          td.textContent = val;
+        }
+        
         tr.appendChild(td);
       });
       table.appendChild(tr);
@@ -167,15 +146,17 @@ class GoogleSheetsClient {
   }
 }
 
-// Initialize client
-const sheetsClient = new GoogleSheetsClient();
+// Keep the name sheetsClient for backward compatibility with index.html events
+const sheetsClient = new SupabaseClient();
 
-// Load data on page load
 document.addEventListener('DOMContentLoaded', async () => {
   const authenticated = await sheetsClient.checkAuth();
   if (authenticated) {
     await sheetsClient.loadData();
   } else {
-    sheetsClient.render();
+    // If not authenticated, but we are on the Vault page, show the login UI
+    if (window.location.pathname.toLowerCase().includes('/vault')) {
+      sheetsClient.render();
+    }
   }
 });
