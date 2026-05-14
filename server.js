@@ -134,8 +134,15 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
   }
 });
 
-// Serve index.html for all non-API routes (SPA support)
+// API Aliases for compatibility
+app.get('/api/products', (req, res) => res.redirect('/api/data'));
+
+// Serve index.html for all non-API, non-file routes (SPA support)
 app.get('*', (req, res) => {
+  // Check if the request is for an API or a file with an extension
+  if (req.path.startsWith('/api/') || req.path.startsWith('/auth/') || path.extname(req.path)) {
+    return res.status(404).send('Not found');
+  }
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
