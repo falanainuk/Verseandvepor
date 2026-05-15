@@ -18,10 +18,27 @@ class SupabaseClient {
       const response = await fetch('/api/auth/status');
       const data = await response.json();
       this.authenticated = data.authenticated;
-      this.updateStatus(this.authenticated ? 'Connected' : 'Sync Required', this.authenticated ? 'success' : 'error');
+      this.updateStatus(this.authenticated ? 'DATABASE SYNC ACTIVE' : 'DATABASE OFFLINE', this.authenticated ? 'success' : 'error');
       return this.authenticated;
     } catch (error) {
       return false;
+    }
+  }
+
+  async testConnection() {
+    try {
+      this.updateStatus('Testing...', 'loading');
+      const response = await fetch('/api/debug');
+      const data = await response.json();
+      if (data.supabase_connected && data.products_table) {
+        alert('✅ Connection Perfect! Database is ready to store products.');
+        this.updateStatus('Connection Perfect', 'success');
+      } else {
+        alert('❌ Connection Error: ' + (data.error || 'Table missing'));
+        this.updateStatus('Connection Failed', 'error');
+      }
+    } catch (error) {
+      alert('❌ Failed to reach server');
     }
   }
 
@@ -56,7 +73,7 @@ class SupabaseClient {
       if (data.success) {
         targetInput.value = data.url;
         targetInput.dispatchEvent(new Event('input', { bubbles: true }));
-        this.updateStatus('Uploaded', 'success');
+        this.updateStatus('Image Uploaded', 'success');
       }
     } catch (error) {
       this.updateStatus('Upload Failed', 'error');
@@ -64,46 +81,35 @@ class SupabaseClient {
   }
 
   initUI() {
-    // Hide original floating widget if it exists
     const style = document.createElement('style');
     style.innerHTML = `
       #vault-sync-btn, .vault-sync-btn { display: none !important; }
-      
       .settings-sync-box {
         margin-bottom: 30px;
-        padding: 20px;
+        padding: 25px;
         border: 1px solid #222;
         border-radius: 4px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        background: rgba(10,10,10,0.5);
+        background: rgba(10,10,10,0.8);
+        border-left: 4px solid #333;
       }
-      .sync-info { display: flex; align-items: center; gap: 10px; font-size: 11px; letter-spacing: 1px; color: #888; }
-      .indicator-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
-      .indicator-dot.success { background: #00ff88; box-shadow: 0 0 10px #00ff88; }
-      .indicator-dot.error { background: #ff4444; }
+      .sync-info { display: flex; align-items: center; gap: 12px; font-size: 11px; letter-spacing: 2px; color: #fff; font-weight: bold; }
+      .indicator-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+      .indicator-dot.success { background: #00ff88; box-shadow: 0 0 12px #00ff88; }
+      .indicator-dot.error { background: #ff4444; box-shadow: 0 0 12px #ff4444; }
       .indicator-dot.loading { background: #ffaa00; animation: blink 1s infinite; }
       @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
-      
-      .sync-login-btn {
-        background: #fff;
-        color: #000;
-        border: none;
-        padding: 6px 15px;
-        border-radius: 2px;
-        font-size: 10px;
-        font-weight: bold;
-        cursor: pointer;
-        letter-spacing: 1px;
+      .sync-actions { margin-top: 15px; display: flex; gap: 10px; }
+      .sync-btn {
+        background: #fff; color: #000; border: none; padding: 8px 18px;
+        border-radius: 2px; font-size: 10px; font-weight: bold; cursor: pointer; letter-spacing: 1px;
       }
+      .sync-btn.secondary { background: transparent; color: #888; border: 1px solid #333; }
+      [data-sonner-toaster], .sonner-toaster, #toast-container { display: none !important; }
     `;
     document.head.appendChild(style);
 
     const observer = new MutationObserver(() => {
       if (!this.isVaultPage) return;
-
-      // 1. Find the "Site Settings" section
       const settingsHeader = Array.from(document.querySelectorAll('h1, h2, h3, p')).find(el => el.textContent.includes('Site Settings'));
       if (settingsHeader && !document.getElementById('settings-sync-panel')) {
         const panel = document.createElement('div');
@@ -112,18 +118,20 @@ class SupabaseClient {
         panel.innerHTML = `
           <div class="sync-info" id="sync-status-indicator">
             <span class="indicator-dot ${this.authenticated ? 'success' : 'error'}"></span>
-            ${this.authenticated ? 'DATABASE SYNC ACTIVE' : 'DATABASE OFFLINE'}
+            ${this.authenticated ? 'DATABASE CONNECTION SECURE' : 'DATABASE DISCONNECTED'}
           </div>
-          ${!this.authenticated ? '<button class="sync-login-btn">LOGIN TO SYNC</button>' : ''}
+          <div class="sync-actions">
+            ${!this.authenticated ? '<button class="sync-btn" id="vault-login-action">LOGIN TO SYNC</button>' : ''}
+            <button class="sync-btn secondary" id="vault-test-action">TEST CONNECTION</button>
+          </div>
         `;
-        
-        const loginBtn = panel.querySelector('.sync-login-btn');
-        if (loginBtn) loginBtn.onclick = () => this.login();
-        
         settingsHeader.after(panel);
+        const loginBtn = panel.querySelector('#vault-login-action');
+        if (loginBtn) loginBtn.onclick = () => this.login();
+        const testBtn = panel.querySelector('#vault-test-action');
+        if (testBtn) testBtn.onclick = () => this.testConnection();
       }
 
-      // 2. Upload Button Logic
       const inputs = document.querySelectorAll('input');
       inputs.forEach(input => {
         const label = input.previousElementSibling || input.parentElement.previousElementSibling;

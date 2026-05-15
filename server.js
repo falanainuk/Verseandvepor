@@ -78,32 +78,39 @@ app.get('/api/data', async (req, res) => {
 });
 
 app.post('/api/data', async (req, res) => {
+  const table = req.query.table || 'products';
   try {
-    if (!isAdminAuthenticated) return res.status(401).json({ error: 'Unauthorized' });
+    if (!isAdminAuthenticated) return res.status(401).json({ error: 'Unauthorized. Please log in via the SYNC button in Settings.' });
 
-    const { newRow } = req.body;
+    const rowData = req.body.newRow || req.body;
+    console.log(`Inserting into ${table}:`, rowData);
+
     const { data, error } = await supabase
-      .from('products')
-      .insert([newRow])
+      .from(table)
+      .insert([rowData])
       .select();
 
-    if (error) throw error;
+    if (error) {
+      console.error(`Error inserting into ${table}:`, error);
+      throw error;
+    }
     res.json({ success: true, data });
   } catch (error) {
-    console.error('Error writing to Supabase:', error);
-    res.status(500).json({ error: 'Failed to write to database: ' + error.message });
+    res.status(500).json({ error: 'Database Write Error: ' + error.message });
   }
 });
 
 app.put('/api/data/:id', async (req, res) => {
+  const table = req.query.table || 'products';
   try {
     if (!isAdminAuthenticated) return res.status(401).json({ error: 'Unauthorized' });
 
     const { id } = req.params;
-    const { rowData } = req.body;
+    const rowData = req.body.rowData || req.body;
+    console.log(`Updating ${table} ID ${id}:`, rowData);
     
     const { data, error } = await supabase
-      .from('products')
+      .from(table)
       .update(rowData)
       .eq('ID', id)
       .select();
@@ -112,7 +119,7 @@ app.put('/api/data/:id', async (req, res) => {
     res.json({ success: true, data });
   } catch (error) {
     console.error('Error updating Supabase:', error);
-    res.status(500).json({ error: 'Failed to update database: ' + error.message });
+    res.status(500).json({ error: 'Database Update Error: ' + error.message });
   }
 });
 
