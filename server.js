@@ -165,7 +165,22 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
 });
 
 // API Aliases for compatibility
-app.get('/api/products', (req, res) => res.redirect('/api/data'));
+app.get('/api/products', async (req, res) => {
+  req.query.table = 'products';
+  // Use the same logic as /api/data
+  try {
+    const { data, error } = await supabase.from('products').select('*');
+    if (error) throw error;
+    const compatibleData = data.map(row => {
+      const mapped = { ...row };
+      Object.keys(row).forEach(key => mapped[key.toLowerCase()] = row[key]);
+      return mapped;
+    });
+    res.json({ headers: Object.keys(data[0] || {}), data: compatibleData });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 // Serve index.html for all non-API, non-file routes (SPA support)
 app.get('*', (req, res) => {
