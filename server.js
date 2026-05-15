@@ -70,8 +70,18 @@ app.get('/api/data', async (req, res) => {
       if (error.code === '42P01') return res.json({ headers: [], data: [], message: `Table "${table}" not found` });
       throw error;
     }
+
+    // MAP DATA: Provide both Uppercase and Lowercase keys to be 100% compatible
+    const compatibleData = data.map(row => {
+      const mapped = { ...row };
+      Object.keys(row).forEach(key => {
+        mapped[key.toLowerCase()] = row[key];
+      });
+      return mapped;
+    });
+
     const headers = data.length > 0 ? Object.keys(data[0]) : [];
-    res.json({ headers, data });
+    res.json({ headers, data: compatibleData });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
