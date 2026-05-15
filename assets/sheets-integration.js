@@ -2,16 +2,19 @@
 class SupabaseClient {
   constructor() {
     this.authenticated = false;
-    this.initUI();
+    this.isVaultPage = window.location.pathname.toLowerCase().includes('/vault');
+    if (this.isVaultPage) {
+      this.initUI();
+    }
   }
 
   updateStatus(message, type) {
+    if (!this.isVaultPage) return;
     const indicator = document.getElementById('sync-indicator-pill');
     if (indicator) {
       indicator.className = `indicator-dot ${type}`;
       indicator.title = message;
     }
-    console.log(`Sync Status: ${message} (${type})`);
   }
 
   async checkAuth() {
@@ -19,7 +22,9 @@ class SupabaseClient {
       const response = await fetch('/api/auth/status');
       const data = await response.json();
       this.authenticated = data.authenticated;
-      this.updateStatus(this.authenticated ? 'Connected' : 'Logged Out', this.authenticated ? 'success' : 'error');
+      if (this.isVaultPage) {
+        this.updateStatus(this.authenticated ? 'Connected' : 'Logged Out', this.authenticated ? 'success' : 'error');
+      }
       return this.authenticated;
     } catch (error) {
       return false;
@@ -40,8 +45,7 @@ class SupabaseClient {
       const data = await response.json();
       if (data.success) {
         this.authenticated = true;
-        this.updateStatus('Connected', 'success');
-        location.reload(); // Refresh to sync everything
+        location.reload();
       } else {
         alert('Invalid password');
       }
@@ -68,55 +72,56 @@ class SupabaseClient {
   }
 
   initUI() {
-    // Inject custom styles for the Vault
     const style = document.createElement('style');
     style.innerHTML = `
-      /* Vault Page Customization */
       .vault-sync-btn {
-        background: transparent;
+        background: rgba(0,0,0,0.5);
         color: #888;
-        border: 1px solid #333;
-        padding: 5px 15px;
-        border-radius: 4px;
+        border: 1px solid #222;
+        padding: 6px 16px;
+        border-radius: 100px;
         font-size: 10px;
         letter-spacing: 2px;
         cursor: pointer;
         transition: all 0.3s;
-        margin-right: 20px;
         display: inline-flex;
         align-items: center;
         gap: 8px;
+        position: fixed;
+        top: 20px;
+        left: 20px;
+        z-index: 10000;
+        backdrop-filter: blur(10px);
       }
-      .vault-sync-btn:hover { color: #fff; border-color: #666; }
+      .vault-sync-btn:hover { color: #fff; border-color: #444; background: rgba(0,0,0,0.8); }
       .indicator-dot { width: 6px; height: 6px; border-radius: 50%; }
       .indicator-dot.success { background: #00ff88; box-shadow: 0 0 8px #00ff88; }
       .indicator-dot.loading { background: #ffaa00; animation: vault-blink 1s infinite; }
       .indicator-dot.error { background: #ff4444; }
       @keyframes vault-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
       
-      /* Customize the form inputs to look more premium */
+      /* Premium Form Style */
       input, textarea, select {
         border-bottom: 1px solid #222 !important;
         background: transparent !important;
-        transition: border-color 0.4s !important;
       }
-      input:focus { border-bottom-color: #555 !important; }
     `;
     document.head.appendChild(style);
 
     const observer = new MutationObserver(() => {
-      // 1. Inject Sync Button into Header (next to EXIT)
-      const headerRight = document.querySelector('nav button')?.parentElement || document.querySelector('header div:last-child');
-      if (headerRight && !document.getElementById('vault-sync-btn')) {
+      if (!this.isVaultPage) return;
+
+      // Ensure the sync button is always there on Vault page
+      if (!document.getElementById('vault-sync-btn')) {
         const btn = document.createElement('button');
         btn.id = 'vault-sync-btn';
         btn.className = 'vault-sync-btn';
         btn.innerHTML = `<span id="sync-indicator-pill" class="indicator-dot ${this.authenticated ? 'success' : 'error'}"></span> SYNC`;
         btn.onclick = () => this.login();
-        headerRight.prepend(btn);
+        document.body.appendChild(btn);
       }
 
-      // 2. Inject Upload Button into Image URL field
+      // Upload Button Logic
       const inputs = document.querySelectorAll('input');
       inputs.forEach(input => {
         const label = input.previousElementSibling || input.parentElement.previousElementSibling;
