@@ -49,13 +49,12 @@ app.post('/api/auth/logout', (req, res) => {
 app.get('/api/debug', async (req, res) => {
   try {
     const { data: productsCount, error: productsError } = await supabase.from('products').select('id', { count: 'exact', head: true });
-    const { data: settingsCount, error: settingsError } = await supabase.from('site_settings').select('id', { count: 'exact', head: true });
     
     res.json({
       supabase_connected: !!process.env.SUPABASE_URL,
+      url_preview: process.env.SUPABASE_URL ? process.env.SUPABASE_URL.substring(0, 25) + '...' : 'NONE',
       products_table: !productsError,
-      settings_table: !settingsError,
-      error: productsError?.message || settingsError?.message || null
+      error: productsError?.message || null
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
