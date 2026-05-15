@@ -46,6 +46,23 @@ app.post('/api/auth/logout', (req, res) => {
 });
 
 // Database routes
+app.get('/api/debug', async (req, res) => {
+  try {
+    const { data: tables, error: tableError } = await supabase
+      .from('products')
+      .select('count', { count: 'exact', head: true });
+    
+    res.json({
+      supabase_connected: !!process.env.SUPABASE_URL,
+      products_table_exists: !tableError,
+      products_count: tables || 0,
+      error: tableError ? tableError.message : null
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/api/data', async (req, res) => {
   try {
     const { data, error } = await supabase
@@ -54,8 +71,8 @@ app.get('/api/data', async (req, res) => {
 
     if (error) {
       console.error('Supabase error:', error);
-      // If table doesn't exist, return empty data instead of 500
-      if (error.code === '42P01') return res.json({ headers: [], data: [] });
+      // Return 200 with empty data if table is missing to prevent frontend crash
+      if (error.code === '42P01') return res.json({ headers: [], data: [], message: 'Table "products" not found' });
       throw error;
     }
 

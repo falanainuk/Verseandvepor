@@ -2,21 +2,16 @@
 class SupabaseClient {
   constructor() {
     this.authenticated = false;
-    this.data = [];
-    this.headers = [];
-    this.initMutationObserver();
+    this.initUI();
   }
 
   updateStatus(message, type) {
-    const statusEl = document.getElementById('sync-indicator');
-    if (!statusEl) return;
-    
-    statusEl.innerHTML = `<span class="indicator-dot ${type}"></span> ${message}`;
-    statusEl.style.opacity = '1';
-    
-    if (type === 'success') {
-      setTimeout(() => statusEl.style.opacity = '0.7', 3000);
+    const indicator = document.getElementById('sync-indicator-pill');
+    if (indicator) {
+      indicator.className = `indicator-dot ${type}`;
+      indicator.title = message;
     }
+    console.log(`Sync Status: ${message} (${type})`);
   }
 
   async checkAuth() {
@@ -24,10 +19,9 @@ class SupabaseClient {
       const response = await fetch('/api/auth/status');
       const data = await response.json();
       this.authenticated = data.authenticated;
-      this.render();
+      this.updateStatus(this.authenticated ? 'Connected' : 'Logged Out', this.authenticated ? 'success' : 'error');
       return this.authenticated;
     } catch (error) {
-      console.error('Error checking auth:', error);
       return false;
     }
   }
@@ -46,67 +40,85 @@ class SupabaseClient {
       const data = await response.json();
       if (data.success) {
         this.authenticated = true;
-        this.updateStatus('Sync Active', 'success');
-        this.render();
-        await this.loadData();
+        this.updateStatus('Connected', 'success');
+        location.reload(); // Refresh to sync everything
       } else {
         alert('Invalid password');
       }
     } catch (error) {
-      console.error('Error logging in:', error);
       alert('Login failed');
     }
   }
 
-  async loadData() {
-    try {
-      this.updateStatus('Syncing...', 'loading');
-      const response = await fetch('/api/data');
-      if (!response.ok) throw new Error('Fetch failed');
-      const data = await response.json();
-      this.headers = data.headers;
-      this.data = data.data;
-      this.updateStatus('Connected to Supabase', 'success');
-      return data;
-    } catch (error) {
-      this.updateStatus('Sync Error', 'error');
-      console.error('Error loading data:', error);
-    }
-  }
-
-  // Image Upload Logic
   async uploadImage(file, targetInput) {
     try {
-      this.updateStatus('Uploading Image...', 'loading');
+      this.updateStatus('Uploading...', 'loading');
       const formData = new FormData();
       formData.append('file', file);
-
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData
-      });
-
+      const response = await fetch('/api/upload', { method: 'POST', body: formData });
       const data = await response.json();
       if (data.success) {
         targetInput.value = data.url;
-        // Trigger React's change event
         targetInput.dispatchEvent(new Event('input', { bubbles: true }));
-        this.updateStatus('Image Uploaded', 'success');
-      } else {
-        throw new Error(data.error);
+        this.updateStatus('Uploaded', 'success');
       }
     } catch (error) {
       this.updateStatus('Upload Failed', 'error');
-      alert('Upload failed: ' + error.message);
     }
   }
 
-  // Inject "Upload" button into React's form
-  initMutationObserver() {
+  initUI() {
+    // Inject custom styles for the Vault
+    const style = document.createElement('style');
+    style.innerHTML = `
+      /* Vault Page Customization */
+      .vault-sync-btn {
+        background: transparent;
+        color: #888;
+        border: 1px solid #333;
+        padding: 5px 15px;
+        border-radius: 4px;
+        font-size: 10px;
+        letter-spacing: 2px;
+        cursor: pointer;
+        transition: all 0.3s;
+        margin-right: 20px;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .vault-sync-btn:hover { color: #fff; border-color: #666; }
+      .indicator-dot { width: 6px; height: 6px; border-radius: 50%; }
+      .indicator-dot.success { background: #00ff88; box-shadow: 0 0 8px #00ff88; }
+      .indicator-dot.loading { background: #ffaa00; animation: vault-blink 1s infinite; }
+      .indicator-dot.error { background: #ff4444; }
+      @keyframes vault-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+      
+      /* Customize the form inputs to look more premium */
+      input, textarea, select {
+        border-bottom: 1px solid #222 !important;
+        background: transparent !important;
+        transition: border-color 0.4s !important;
+      }
+      input:focus { border-bottom-color: #555 !important; }
+    `;
+    document.head.appendChild(style);
+
     const observer = new MutationObserver(() => {
+      // 1. Inject Sync Button into Header (next to EXIT)
+      const headerRight = document.querySelector('nav button')?.parentElement || document.querySelector('header div:last-child');
+      if (headerRight && !document.getElementById('vault-sync-btn')) {
+        const btn = document.createElement('button');
+        btn.id = 'vault-sync-btn';
+        btn.className = 'vault-sync-btn';
+        btn.innerHTML = `<span id="sync-indicator-pill" class="indicator-dot ${this.authenticated ? 'success' : 'error'}"></span> SYNC`;
+        btn.onclick = () => this.login();
+        headerRight.prepend(btn);
+      }
+
+      // 2. Inject Upload Button into Image URL field
       const inputs = document.querySelectorAll('input');
       inputs.forEach(input => {
-        // Find the Image URL input (usually by label or placeholder)
         const label = input.previousElementSibling || input.parentElement.previousElementSibling;
         if (label && label.textContent.toUpperCase().includes('IMAGE URL') && !input.dataset.uploadAttached) {
           input.dataset.uploadAttached = 'true';
@@ -119,85 +131,18 @@ class SupabaseClient {
 
   attachUploadButton(input) {
     const btn = document.createElement('button');
-    btn.innerHTML = '📤 Upload File';
-    btn.style.cssText = 'background: #fff; color: #000; border: none; padding: 4px 10px; border-radius: 4px; font-size: 11px; cursor: pointer; margin-top: 5px; font-weight: bold;';
-    
+    btn.innerHTML = 'UPLOAD IMAGE';
+    btn.style.cssText = 'background: #111; color: #666; border: 1px solid #222; padding: 6px 12px; border-radius: 2px; font-size: 9px; cursor: pointer; margin-top: 8px; letter-spacing: 1px;';
+    btn.onclick = (e) => { e.preventDefault(); fileInput.click(); };
     const fileInput = document.createElement('input');
     fileInput.type = 'file';
     fileInput.accept = 'image/*';
     fileInput.style.display = 'none';
-
-    btn.onclick = (e) => {
-      e.preventDefault();
-      fileInput.click();
-    };
-
-    fileInput.onchange = (e) => {
-      if (e.target.files[0]) {
-        this.uploadImage(e.target.files[0], input);
-      }
-    };
-
+    fileInput.onchange = (e) => { if (e.target.files[0]) this.uploadImage(e.target.files[0], input); };
     input.parentElement.appendChild(btn);
     input.parentElement.appendChild(fileInput);
-  }
-
-  render() {
-    let widget = document.getElementById('sheets-widget');
-    if (!widget) return;
-
-    // Reset widget style to be a subtle indicator
-    widget.style.cssText = 'position: fixed; bottom: 20px; right: 20px; z-index: 10000; font-family: sans-serif;';
-    
-    widget.innerHTML = `
-      <style>
-        .sync-pill {
-          background: rgba(20, 20, 20, 0.9);
-          border: 1px solid #333;
-          border-radius: 100px;
-          padding: 8px 16px;
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          color: #eee;
-          font-size: 12px;
-          box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-          backdrop-filter: blur(10px);
-        }
-        .indicator-dot {
-          width: 8px;
-          height: 8px;
-          border-radius: 50%;
-          display: inline-block;
-        }
-        .indicator-dot.success { background: #00ff88; box-shadow: 0 0 10px #00ff88; }
-        .indicator-dot.loading { background: #ffaa00; animation: blink 1s infinite; }
-        .indicator-dot.error { background: #ff4444; }
-        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
-        .vault-btn {
-          background: #fff;
-          color: #000;
-          border: none;
-          padding: 4px 12px;
-          border-radius: 50px;
-          font-size: 11px;
-          font-weight: bold;
-          cursor: pointer;
-        }
-      </style>
-      <div class="sync-pill" id="sync-container">
-        <div id="sync-indicator">
-          <span class="indicator-dot ${this.authenticated ? 'success' : 'error'}"></span>
-          ${this.authenticated ? 'Sync Active' : 'Offline'}
-        </div>
-        ${!this.authenticated ? '<button class="vault-btn" onclick="sheetsClient.login()">LOGIN</button>' : ''}
-      </div>
-    `;
   }
 }
 
 const sheetsClient = new SupabaseClient();
-
-document.addEventListener('DOMContentLoaded', () => {
-  sheetsClient.checkAuth();
-});
+document.addEventListener('DOMContentLoaded', () => sheetsClient.checkAuth());
