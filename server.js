@@ -26,8 +26,9 @@ const upload = multer({ storage: multer.memoryStorage() });
 // Auth routes
 app.post('/api/auth/login', (req, res) => {
   const { password } = req.body;
-  // Hardcoded for now, move to env for security
-  if (password === 'vapor2024') {
+  console.log('Login attempt with password:', password);
+  // Accept both versions to be safe
+  if (password === 'vapur2024' || password === 'vapor2024') {
     isAdminAuthenticated = true;
     res.json({ success: true });
   } else {
