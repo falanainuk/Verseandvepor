@@ -3,17 +3,13 @@ class SupabaseClient {
   constructor() {
     this.authenticated = false;
     this.isVaultPage = window.location.pathname.toLowerCase().includes('/vault');
-    if (this.isVaultPage) {
-      this.initUI();
-    }
+    this.initUI();
   }
 
   updateStatus(message, type) {
-    if (!this.isVaultPage) return;
-    const indicator = document.getElementById('sync-indicator-pill');
+    const indicator = document.getElementById('sync-status-indicator');
     if (indicator) {
-      indicator.className = `indicator-dot ${type}`;
-      indicator.title = message;
+      indicator.innerHTML = `<span class="indicator-dot ${type}"></span> ${message}`;
     }
   }
 
@@ -22,9 +18,7 @@ class SupabaseClient {
       const response = await fetch('/api/auth/status');
       const data = await response.json();
       this.authenticated = data.authenticated;
-      if (this.isVaultPage) {
-        this.updateStatus(this.authenticated ? 'Connected' : 'Logged Out', this.authenticated ? 'success' : 'error');
-      }
+      this.updateStatus(this.authenticated ? 'Connected' : 'Sync Required', this.authenticated ? 'success' : 'error');
       return this.authenticated;
     } catch (error) {
       return false;
@@ -34,14 +28,12 @@ class SupabaseClient {
   async login() {
     const password = prompt('Enter Admin Password:');
     if (!password) return;
-
     try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password }),
       });
-      
       const data = await response.json();
       if (data.success) {
         this.authenticated = true;
@@ -72,38 +64,38 @@ class SupabaseClient {
   }
 
   initUI() {
+    // Hide original floating widget if it exists
     const style = document.createElement('style');
     style.innerHTML = `
-      .vault-sync-btn {
-        background: rgba(0,0,0,0.5);
-        color: #888;
-        border: 1px solid #222;
-        padding: 6px 16px;
-        border-radius: 100px;
-        font-size: 10px;
-        letter-spacing: 2px;
-        cursor: pointer;
-        transition: all 0.3s;
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        position: fixed;
-        top: 20px;
-        left: 20px;
-        z-index: 10000;
-        backdrop-filter: blur(10px);
-      }
-      .vault-sync-btn:hover { color: #fff; border-color: #444; background: rgba(0,0,0,0.8); }
-      .indicator-dot { width: 6px; height: 6px; border-radius: 50%; }
-      .indicator-dot.success { background: #00ff88; box-shadow: 0 0 8px #00ff88; }
-      .indicator-dot.loading { background: #ffaa00; animation: vault-blink 1s infinite; }
-      .indicator-dot.error { background: #ff4444; }
-      @keyframes vault-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+      #vault-sync-btn, .vault-sync-btn { display: none !important; }
       
-      /* Premium Form Style */
-      input, textarea, select {
-        border-bottom: 1px solid #222 !important;
-        background: transparent !important;
+      .settings-sync-box {
+        margin-bottom: 30px;
+        padding: 20px;
+        border: 1px solid #222;
+        border-radius: 4px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: rgba(10,10,10,0.5);
+      }
+      .sync-info { display: flex; align-items: center; gap: 10px; font-size: 11px; letter-spacing: 1px; color: #888; }
+      .indicator-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+      .indicator-dot.success { background: #00ff88; box-shadow: 0 0 10px #00ff88; }
+      .indicator-dot.error { background: #ff4444; }
+      .indicator-dot.loading { background: #ffaa00; animation: blink 1s infinite; }
+      @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+      
+      .sync-login-btn {
+        background: #fff;
+        color: #000;
+        border: none;
+        padding: 6px 15px;
+        border-radius: 2px;
+        font-size: 10px;
+        font-weight: bold;
+        cursor: pointer;
+        letter-spacing: 1px;
       }
     `;
     document.head.appendChild(style);
@@ -111,17 +103,27 @@ class SupabaseClient {
     const observer = new MutationObserver(() => {
       if (!this.isVaultPage) return;
 
-      // Ensure the sync button is always there on Vault page
-      if (!document.getElementById('vault-sync-btn')) {
-        const btn = document.createElement('button');
-        btn.id = 'vault-sync-btn';
-        btn.className = 'vault-sync-btn';
-        btn.innerHTML = `<span id="sync-indicator-pill" class="indicator-dot ${this.authenticated ? 'success' : 'error'}"></span> SYNC`;
-        btn.onclick = () => this.login();
-        document.body.appendChild(btn);
+      // 1. Find the "Site Settings" section
+      const settingsHeader = Array.from(document.querySelectorAll('h1, h2, h3, p')).find(el => el.textContent.includes('Site Settings'));
+      if (settingsHeader && !document.getElementById('settings-sync-panel')) {
+        const panel = document.createElement('div');
+        panel.id = 'settings-sync-panel';
+        panel.className = 'settings-sync-box';
+        panel.innerHTML = `
+          <div class="sync-info" id="sync-status-indicator">
+            <span class="indicator-dot ${this.authenticated ? 'success' : 'error'}"></span>
+            ${this.authenticated ? 'DATABASE SYNC ACTIVE' : 'DATABASE OFFLINE'}
+          </div>
+          ${!this.authenticated ? '<button class="sync-login-btn">LOGIN TO SYNC</button>' : ''}
+        `;
+        
+        const loginBtn = panel.querySelector('.sync-login-btn');
+        if (loginBtn) loginBtn.onclick = () => this.login();
+        
+        settingsHeader.after(panel);
       }
 
-      // Upload Button Logic
+      // 2. Upload Button Logic
       const inputs = document.querySelectorAll('input');
       inputs.forEach(input => {
         const label = input.previousElementSibling || input.parentElement.previousElementSibling;

@@ -48,15 +48,14 @@ app.post('/api/auth/logout', (req, res) => {
 // Database routes
 app.get('/api/debug', async (req, res) => {
   try {
-    const { data: tables, error: tableError } = await supabase
-      .from('products')
-      .select('count', { count: 'exact', head: true });
+    const { data: productsCount, error: productsError } = await supabase.from('products').select('id', { count: 'exact', head: true });
+    const { data: settingsCount, error: settingsError } = await supabase.from('site_settings').select('id', { count: 'exact', head: true });
     
     res.json({
       supabase_connected: !!process.env.SUPABASE_URL,
-      products_table_exists: !tableError,
-      products_count: tables || 0,
-      error: tableError ? tableError.message : null
+      products_table: !productsError,
+      settings_table: !settingsError,
+      error: productsError?.message || settingsError?.message || null
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -64,23 +63,17 @@ app.get('/api/debug', async (req, res) => {
 });
 
 app.get('/api/data', async (req, res) => {
+  const table = req.query.table || 'products';
   try {
-    const { data, error } = await supabase
-      .from('products')
-      .select('*');
-
+    const { data, error } = await supabase.from(table).select('*');
     if (error) {
-      console.error('Supabase error:', error);
-      // Return 200 with empty data if table is missing to prevent frontend crash
-      if (error.code === '42P01') return res.json({ headers: [], data: [], message: 'Table "products" not found' });
+      if (error.code === '42P01') return res.json({ headers: [], data: [], message: `Table "${table}" not found` });
       throw error;
     }
-
-    const headers = data.length > 0 ? Object.keys(data[0]) : ['ID', 'NAME', 'Price', 'Description', 'ImageURL', 'Category', 'InStock', 'VOLUME', 'ORIGIN', 'INGREDIENTS'];
+    const headers = data.length > 0 ? Object.keys(data[0]) : [];
     res.json({ headers, data });
   } catch (error) {
-    console.error('Error reading Supabase:', error);
-    res.status(500).json({ error: 'Failed to read database: ' + error.message });
+    res.status(500).json({ error: error.message });
   }
 });
 
