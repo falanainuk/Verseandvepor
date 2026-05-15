@@ -12,10 +12,9 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname)));
 
 // Supabase client
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_ANON_KEY
-);
+const supabaseUrl = (process.env.SUPABASE_URL || '').trim();
+const supabaseKey = (process.env.SUPABASE_ANON_KEY || '').trim();
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Store session in memory (for simplicity, use cookies/JWT in production)
 let isAdminAuthenticated = false;
@@ -48,16 +47,20 @@ app.post('/api/auth/logout', (req, res) => {
 // Database routes
 app.get('/api/debug', async (req, res) => {
   try {
-    const { data: productsCount, error: productsError } = await supabase.from('products').select('id', { count: 'exact', head: true });
+    const { data, error: productsError } = await supabase.from('products').select('*', { count: 'exact', head: true });
     
     res.json({
       supabase_connected: !!process.env.SUPABASE_URL,
-      url_preview: process.env.SUPABASE_URL ? process.env.SUPABASE_URL.substring(0, 25) + '...' : 'NONE',
+      url_preview: supabaseUrl ? supabaseUrl.substring(0, 25) + '...' : 'NONE',
       products_table: !productsError,
-      error: productsError?.message || null
+      full_error: productsError || null,
+      env_debug: {
+        url_length: supabaseUrl.length,
+        key_length: supabaseKey.length
+      }
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: err.message, stack: err.stack });
   }
 });
 
